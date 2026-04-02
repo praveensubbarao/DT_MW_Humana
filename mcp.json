@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "microsoft/playwright-mcp": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/npx",
+      "args": [
+        "-y", "@playwright/mcp"
+      ],
+      "gallery": "https://api.mcp.github.com",
+      "version": "0.0.1-seed"
+    }
+  },
+  "inputs": []
+}

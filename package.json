@@ -1,0 +1,23 @@
+{
+  "name": "humana-provider-playwright",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Praveen Subbarao <praveen.tendulkar@gmail.com>",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:desktop": "npx playwright test --project=chromium",
+    "test:headed": "npx playwright test --headed",
+    "install:browsers": "npx playwright install",
+    "check:spec-comments": "node ./scripts/validate-spec-comments.js",
+    "precommit": "npm run check:spec-comments",
+    "format": "prettier --write .",
+    "prompt:new": "node ./scripts/new-prompt.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.54.1",
+    "@types/node": "^25.5.0",
+    "dotenv": "^17.2.3",
+    "prettier": "^3.0.0",
+    "typescript": "^5.7.3"
+  }
+}
