@@ -23,6 +23,7 @@ export default defineConfig({
   },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  failOnFlakyTests: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.WORKER_COUNT ? Number(process.env.WORKER_COUNT) : 2,
   use: {
@@ -31,7 +32,7 @@ export default defineConfig({
     actionTimeout: 60_000,
     navigationTimeout: 60_000,
     screenshot: 'on',
-    trace: 'retain-on-failure',
+    trace: 'retain-on-failure-and-retries',
     video: 'on',
   },
   projects: [
