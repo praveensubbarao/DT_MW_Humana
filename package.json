@@ -4,16 +4,20 @@
   "private": true,
   "author": "Praveen Subbarao <praveen.tendulkar@gmail.com>",
   "scripts": {
-    "test": "npx playwright test",
-    "test:desktop": "npx playwright test --project=chromium",
-    "test:headed": "npx playwright test --headed",
+    "ollama:start": "./scripts/start-ollama.sh --wait",
+    "ollama:stop": "./scripts/start-ollama.sh --stop",
+    "test": "./scripts/start-ollama.sh --wait && npx playwright test",
+    "test:desktop": "./scripts/start-ollama.sh --wait && npx playwright test --project=chromium",
+    "test:headed": "./scripts/start-ollama.sh --wait && npx playwright test --headed",
     "install:browsers": "npx playwright install",
     "test:changed": "npx playwright test --only-changed",
     "test:retry-failed": "npx playwright test --last-failed",
     "check:spec-comments": "node ./scripts/validate-spec-comments.js",
     "precommit": "npm run check:spec-comments",
     "format": "prettier --write .",
-    "prompt:new": "node ./scripts/new-prompt.js"
+    "prompt:new": "node ./scripts/new-prompt.js",
+    "heal:suggest": "node ./scripts/suggest-selector-fixes.js",
+    "heal:apply": "node ./scripts/suggest-selector-fixes.js --apply"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

@@ -6,8 +6,8 @@ type AppFixtures = {
 };
 
 export const test = base.extend<AppFixtures>({
-  providerActions: async ({ page }, use) => {
-    await use(new ProviderPortalActions(page));
+  providerActions: async ({ page }, use, testInfo) => {
+    await use(new ProviderPortalActions(page, testInfo));
   },
 });
 
