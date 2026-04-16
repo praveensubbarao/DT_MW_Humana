@@ -45,5 +45,6 @@ export default defineConfig({
     ['list'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     ['junit', { outputFile: 'playwright-results/junit-report.xml' }],
+    ['./src/utils/selfHeal/selfHealReporter.ts'],
   ],
 });

@@ -1,4 +1,5 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect, Locator, Page, TestInfo } from '@playwright/test';
+import { selfHeal } from '@/utils/selfHeal/selfHealingLocator';
 
 /**
  * Actions class for the Humana Provider Portal (provider.humana.com).
@@ -12,7 +13,10 @@ import { expect, Locator, Page } from '@playwright/test';
  * open megamenu dropdowns on click. Dropdown links are standard <a> elements.
  */
 export class ProviderPortalActions {
-  constructor(private readonly page: Page) {}
+  constructor(
+    private readonly page: Page,
+    private readonly testInfo?: TestInfo,
+  ) {}
 
   async openProviderPortal() {
     await this.page.goto('/');
@@ -73,7 +77,12 @@ export class ProviderPortalActions {
    * The nav buttons have no href — they reveal a dropdown on click.
    */
   async clickTopNavButton(labelText: string) {
-    const btn = this.page.getByRole('button', { name: labelText, exact: false }).first();
+    const btn = this.testInfo
+      ? await selfHeal(this.page, this.testInfo, {
+          description: `Top nav button: ${labelText}`,
+          primary: p => p.getByRole('button', { name: labelText, exact: false }).first(),
+        })
+      : this.page.getByRole('button', { name: labelText, exact: false }).first();
     await expect(btn).toBeVisible({ timeout: 20_000 });
     await this.clickLocator(btn);
   }
@@ -83,14 +92,25 @@ export class ProviderPortalActions {
    * After clicking, waits for navigation to complete.
    */
   async clickDropdownLink(linkText: string, hrefFragment?: string) {
-    // Prefer exact text match first; fall back to partial match
-    let link = this.page.getByRole('link', { name: linkText, exact: true }).first();
-    if ((await link.count()) === 0 || !(await link.isVisible())) {
-      link = this.page.getByRole('link', { name: linkText, exact: false }).first();
-    }
+    let link: Locator;
 
-    if ((await link.count()) === 0 && hrefFragment) {
-      link = this.page.locator(`a[href*="${hrefFragment}"]`).first();
+    if (this.testInfo) {
+      link = await selfHeal(this.page, this.testInfo, {
+        description: `Dropdown link: ${linkText}${hrefFragment ? ` (href contains: ${hrefFragment})` : ''}`,
+        primary: p => {
+          const exact = p.getByRole('link', { name: linkText, exact: true }).first();
+          return exact;
+        },
+      });
+    } else {
+      // No testInfo — use original multi-strategy fallback without Ollama
+      link = this.page.getByRole('link', { name: linkText, exact: true }).first();
+      if ((await link.count()) === 0 || !(await link.isVisible())) {
+        link = this.page.getByRole('link', { name: linkText, exact: false }).first();
+      }
+      if ((await link.count()) === 0 && hrefFragment) {
+        link = this.page.locator(`a[href*="${hrefFragment}"]`).first();
+      }
     }
 
     await expect(link).toBeVisible({ timeout: 15_000 });

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lighthouse + Playwright Integration</title>
+  <title>Lighthouse + Playwright — Performance Auditing Inside Your Test Suite</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" />
@@ -15,479 +15,313 @@
       --lh-red:    #e63946;
       --pw-purple: #a259ff;
     }
-
     .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
     .reveal h1, .reveal h2, .reveal h3 { text-transform: none; letter-spacing: -0.02em; }
-    .reveal h1 { font-size: 2em; }
-    .reveal h2 { font-size: 1.5em; }
+    .reveal h1 { font-size: 1.9em; }
+    .reveal h2 { font-size: 1.45em; }
     .reveal pre  { box-shadow: none; width: 100%; margin: 0; }
-    .reveal code { font-size: 0.78em; line-height: 1.55; }
+    .reveal code { font-size: 0.75em; line-height: 1.55; }
     .reveal ul   { list-style: none; padding: 0; }
     .reveal ul li::before { content: "▶  "; color: var(--lh-orange); }
     .reveal ul li { margin-bottom: 0.45em; }
     .reveal .slides section { padding: 30px 50px; }
 
-    /* ── shared utility ── */
-    .tag   { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.55em; font-weight: 700; vertical-align: middle; margin-left: 8px; }
+    .tag   { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.52em; font-weight: 700; vertical-align: middle; margin-left: 8px; }
     .t-new { background: var(--lh-green);  color: #000; }
     .t-mod { background: var(--lh-orange); color: #000; }
 
-    .pill-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 18px; }
-    .pill { background: #1e2030; border: 2px solid var(--lh-orange); border-radius: 30px;
-            padding: 10px 24px; font-size: 0.7em; font-weight: 600; }
+    .pill-row { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 18px; }
+    .pill { background: #1e2030; border: 2px solid var(--lh-orange); border-radius: 30px; padding: 9px 22px; font-size: 0.65em; font-weight: 600; }
 
-    /* ── title slide ── */
-    .title-logo { font-size: 3em; margin-bottom: 10px; }
-    .title-sub  { color: #a0a8c0; font-size: 0.75em; margin-top: 6px; }
+    .title-logo { font-size: 2.8em; margin-bottom: 10px; }
+    .title-sub  { color: #a0a8c0; font-size: 0.72em; margin-top: 6px; }
 
-    /* ── arch diagram ── */
     .arch { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
-    .box  { border-radius: 10px; padding: 14px 20px; font-size: 0.65em; font-weight: 700;
-            text-align: center; min-width: 120px; line-height: 1.4; }
-    .box.pw   { background: #2d1f5e; border: 2px solid var(--pw-purple); color: var(--pw-purple); }
-    .box.lh   { background: #3a1f00; border: 2px solid var(--lh-orange); color: var(--lh-orange); }
-    .box.rep  { background: #003a1f; border: 2px solid var(--lh-green);  color: var(--lh-green); }
-    .arrow    { font-size: 1.4em; color: #555; }
+    .box  { border-radius: 10px; padding: 14px 20px; font-size: 0.62em; font-weight: 700; text-align: center; min-width: 110px; line-height: 1.4; }
+    .box.pw  { background: #2d1f5e; border: 2px solid var(--pw-purple); color: var(--pw-purple); }
+    .box.lh  { background: #3a1f00; border: 2px solid var(--lh-orange); color: var(--lh-orange); }
+    .box.rep { background: #003a1f; border: 2px solid var(--lh-green);  color: var(--lh-green); }
+    .arrow   { font-size: 1.4em; color: #555; }
 
-    /* ── score gauge row ── */
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    .col-label { font-size: 0.52em; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--lh-orange); margin-bottom: 8px; }
+
     .scores { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-    .gauge  { width: 130px; text-align: center; }
-    .gauge .ring { position: relative; width: 100px; height: 100px; margin: 0 auto 8px; }
+    .gauge  { width: 128px; text-align: center; }
+    .gauge .ring { position: relative; width: 96px; height: 96px; margin: 0 auto 8px; }
     .gauge svg   { width: 100%; height: 100%; transform: rotate(-90deg); }
     .gauge .ring-bg  { fill: none; stroke: #2a2a3a; stroke-width: 10; }
-    .gauge .ring-val { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .6s; }
-    .gauge .score-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-                        font-size: 1.5em; font-weight: 700; }
-    .gauge .label { font-size: 0.55em; color: #a0a8c0; text-transform: uppercase; letter-spacing: .05em; }
+    .gauge .ring-val { fill: none; stroke-width: 10; stroke-linecap: round; }
+    .gauge .score-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 1.45em; font-weight: 700; }
+    .gauge .label { font-size: 0.52em; color: #a0a8c0; text-transform: uppercase; letter-spacing: .05em; }
 
-    /* ── report screenshot mock ── */
-    .report-mock { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-top: 16px; font-size: 0.6em; border: 1px solid #2e2e50; }
-    .report-mock .row     { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .report-mock .icon    { font-size: 1.4em; }
-    .report-mock .pass    { color: var(--lh-green); }
-    .report-mock .fail    { color: var(--lh-red); }
-    .report-mock .attach  { background: #0d3b66; color: var(--lh-blue); border-radius: 6px;
-                            padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px;
-                            cursor: pointer; font-size: 0.9em; margin-top: 4px; }
-    .report-mock .anno    { background: #3a1f00; border-left: 3px solid var(--lh-orange);
-                            padding: 6px 12px; border-radius: 0 6px 6px 0; margin-top: 8px; }
-    .report-mock .anno span { margin-right: 14px; }
+    .report-mock { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-top: 16px; font-size: 0.58em; border: 1px solid #2e2e50; }
+    .report-mock .row    { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .report-mock .pass   { color: var(--lh-green); }
+    .report-mock .attach { background: #0d3b66; color: var(--lh-blue); border-radius: 6px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9em; margin-top: 4px; }
+    .report-mock .anno   { background: #3a1f00; border-left: 3px solid var(--lh-orange); padding: 6px 12px; border-radius: 0 6px 6px 0; margin-top: 8px; }
 
-    /* ── two-col ── */
-    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
-    .cols .col { text-align: left; }
-    .col-label { font-size: 0.55em; font-weight: 700; text-transform: uppercase;
-                 letter-spacing: .08em; color: var(--lh-orange); margin-bottom: 8px; }
+    .callout { background: #1a2e1a; border-left: 4px solid var(--lh-green); border-radius: 0 8px 8px 0; padding: 12px 18px; font-size: 0.62em; margin-top: 16px; text-align: left; }
+    .callout strong { color: var(--lh-green); }
+    .callout.blue  { background: #0d1e30; border-color: var(--lh-blue); }
+    .callout.blue strong { color: var(--lh-blue); }
 
-    /* ── step list ── */
+    .threshold-table { width: 100%; border-collapse: collapse; font-size: 0.6em; margin-top: 16px; }
+    .threshold-table th { background: #1e2030; color: var(--lh-orange); padding: 8px 14px; text-align: left; }
+    .threshold-table td { padding: 7px 14px; border-bottom: 1px solid #2a2a3a; }
+    .threshold-table tr:last-child td { border-bottom: none; }
+    .val-good { color: var(--lh-green);  font-weight: 700; }
+    .val-warn { color: var(--lh-orange); font-weight: 700; }
+
     .step-list { counter-reset: step; list-style: none; padding: 0; margin-top: 8px; }
     .step-list li { counter-increment: step; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-    .step-list li::before { content: counter(step); background: var(--lh-orange); color: #000;
-                            border-radius: 50%; width: 26px; height: 26px; flex-shrink: 0;
-                            display: flex; align-items: center; justify-content: center;
-                            font-size: 0.7em; font-weight: 800; }
+    .step-list li::before { content: counter(step); background: var(--lh-orange); color: #000; border-radius: 50%; width: 26px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68em; font-weight: 800; }
 
-    /* ── highlight box ── */
-    .callout { background: #1a2e1a; border-left: 4px solid var(--lh-green); border-radius: 0 8px 8px 0;
-               padding: 12px 18px; font-size: 0.65em; margin-top: 16px; text-align: left; }
-    .callout strong { color: var(--lh-green); }
-
-    /* ── final slide ── */
-    .final-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-    .final-card { background: #1e2030; border-radius: 10px; padding: 18px; text-align: left; font-size: 0.6em; }
-    .final-card h4 { margin: 0 0 10px; color: var(--lh-orange); font-size: 1.1em; text-transform: none; }
+    .final-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+    .final-card { background: #1e2030; border-radius: 10px; padding: 16px; text-align: left; font-size: 0.58em; }
+    .final-card h4 { margin: 0 0 8px; color: var(--lh-orange); font-size: 1.1em; text-transform: none; }
   </style>
 </head>
 <body>
-<div class="reveal">
-<div class="slides">
+<div class="reveal"><div class="slides">
 
-<!-- ─── SLIDE 1: TITLE ─── -->
+<!-- SLIDE 1 — TITLE -->
 <section>
   <div class="title-logo">🔦⚡</div>
   <h1>Lighthouse + Playwright</h1>
-  <h2 style="color: var(--lh-orange);">Performance Auditing Inside Your Test Suite</h2>
-  <p class="title-sub">One fixture. Zero extra tooling. Reports in the HTML dashboard.</p>
+  <h2 style="color:var(--lh-orange)">Performance Auditing Inside Your Test Suite</h2>
+  <p class="title-sub">One fixture. Zero extra tooling. Desktop &amp; mobile. Reports in the HTML dashboard.</p>
   <div class="pill-row">
-    <span class="pill">@playwright/test 1.39+</span>
+    <span class="pill">@playwright/test 1.54+</span>
     <span class="pill">lighthouse 13.x</span>
-    <span class="pill">TypeScript</span>
-    <span class="pill">~100 lines of code</span>
+    <span class="pill">TypeScript 5.x</span>
+    <span class="pill">Node 20+</span>
   </div>
 </section>
 
-<!-- ─── SLIDE 2: WHY ─── -->
+<!-- SLIDE 2 — WHY -->
 <section>
   <h2>The Problem</h2>
   <div class="cols" style="margin-top:24px">
-    <div class="col">
+    <div>
       <div class="col-label">Without integration</div>
-      <ul style="font-size:0.7em">
-        <li>Lighthouse runs manually or in CI as a separate job</li>
+      <ul style="font-size:0.68em">
+        <li>Lighthouse runs manually or as a separate CI job</li>
         <li>Performance regressions discovered late</li>
         <li>Scores live in a separate dashboard — not next to test results</li>
-        <li>No easy way to <em>assert</em> on scores per test</li>
+        <li>No easy way to <em>assert</em> on scores per build</li>
       </ul>
     </div>
-    <div class="col">
+    <div>
       <div class="col-label">With integration</div>
-      <ul style="font-size:0.7em">
-        <li>Lighthouse runs as part of every test run</li>
-        <li>Full HTML report attached directly to the test result</li>
-        <li>Scores annotated on the test — visible in the Playwright report</li>
-        <li>Assert thresholds → CI <strong style="color:var(--lh-red)">fails</strong> on regression</li>
+      <ul style="font-size:0.68em">
+        <li>Lighthouse runs as part of every <code>yarn test</code></li>
+        <li>Full HTML report attached to the test result</li>
+        <li>Scores annotated per test — visible in Playwright report</li>
+        <li>Soft assertions → all categories checked, CI flags regressions</li>
       </ul>
     </div>
   </div>
 </section>
 
-<!-- ─── SLIDE 3: ARCHITECTURE ─── -->
+<!-- SLIDE 3 — ARCHITECTURE -->
 <section>
-  <h2>How It Fits Together</h2>
+  <h2>Architecture — No CDP Conflict</h2>
   <div class="arch">
-    <div class="box pw">Playwright<br/>Test Runner<br/><small>(controls browser)</small></div>
+    <div class="box pw">Playwright<br/>Test Runner<br/><small>controls browser</small></div>
     <div class="arrow">→</div>
-    <div class="box lh">Lighthouse<br/>Fixture<br/><small>(separate Chrome)</small></div>
+    <div class="box lh">Lighthouse<br/>Fixture<br/><small>separate Chrome</small></div>
     <div class="arrow">→</div>
     <div class="box rep">Playwright<br/>HTML Report<br/><small>+ LH attachment</small></div>
   </div>
   <div class="callout" style="margin-top:28px">
-    <strong>Key insight:</strong> Lighthouse launches its <em>own</em> headless Chrome via
-    <code>chrome-launcher</code> — no CDP conflict with the Playwright browser already
-    driving the page.
+    <strong>Key insight:</strong> Lighthouse launches its own headless Chrome via <code>chrome-launcher</code> on a separate port — no DevTools Protocol conflict with Playwright's browser.
   </div>
-  <div class="callout" style="margin-top:12px; background:#1a1a2e; border-color:var(--lh-blue)">
-    <strong style="color:var(--lh-blue)">Fixture is lazy:</strong> Lighthouse only runs in
-    tests that call <code>lighthouse.audit(url)</code> — zero overhead for all other tests.
+  <div class="callout blue" style="margin-top:12px">
+    <strong style="color:var(--lh-blue)">Lazy by design:</strong> Lighthouse only runs in tests that call <code>lighthouse.audit()</code> or <code>lighthouse.auditMobile()</code>. Zero overhead for all other tests.
   </div>
 </section>
 
-<!-- ─── SLIDE 4: INSTALL ─── -->
+<!-- SLIDE 4 — RUNNER -->
 <section>
-  <h2>Step 1 — Install</h2>
-  <pre><code class="language-bash" style="font-size:1em; padding:24px">yarn add -D lighthouse</code></pre>
-  <p style="font-size:0.65em; color:#a0a8c0; margin-top:16px">
-    <code>chrome-launcher</code> is a dependency of <code>lighthouse</code> and is installed automatically.<br/>
-    No other packages needed.
-  </p>
-  <div class="pill-row" style="margin-top:30px">
-    <span class="pill" style="border-color:var(--lh-green)">lighthouse 13.x → pure ESM</span>
-    <span class="pill" style="border-color:var(--lh-green)">Node 20+ required</span>
-    <span class="pill" style="border-color:var(--lh-green)">works with Playwright 1.39+</span>
-  </div>
-</section>
-
-<!-- ─── SLIDE 5: UTILITY ─── -->
-<section>
-  <h2>Step 2 — The Core Utility <span class="tag t-new">NEW FILE</span></h2>
-  <p style="font-size:0.55em; color:#a0a8c0; text-align:left; margin:0 0 8px">
-    <code>src/utils/lighthouse/runLighthouse.ts</code>
-  </p>
-  <pre><code class="language-typescript">export interface LighthouseScores {
-  performance: number; accessibility: number;
-  bestPractices: number; seo: number;
-}
-
-export async function runLighthouse(url: string) {
-  const { launch }           = await import('chrome-launcher');
-  const { default: lighthouse } = await import('lighthouse');
-
-  // Own Chrome instance — no conflict with Playwright's browser
+  <h2>Step 1 — Core Runner <span class="tag t-new">NEW FILE</span></h2>
+  <p style="font-size:0.52em;color:#a0a8c0;text-align:left;margin:0 0 8px"><code>src/utils/lighthouse/runLighthouse.ts</code></p>
+  <pre><code class="language-typescript">export async function runLighthouse(
+  url: string,
+  formFactor: 'desktop' | 'mobile' = 'desktop',
+): Promise&lt;LighthouseResult&gt; {
   const chrome = await launch({
-    chromeFlags: ['--headless', '--no-sandbox', '--disable-gpu']
+    chromeFlags: ['--headless','--no-sandbox','--disable-gpu'],
   });
+  const emulation = formFactor === 'mobile'
+    ? { formFactor: 'mobile' as const,
+        screenEmulation: { mobile: true, width: 412, height: 915,
+                           deviceScaleFactor: 2.625, disabled: false } }
+    : { formFactor: 'desktop' as const,
+        screenEmulation: { mobile: false, width: 1350, height: 940,
+                           deviceScaleFactor: 1, disabled: false } };
   try {
     const result = await lighthouse(url, {
-      port: chrome.port,
-      output: ['html', 'json'],          // both formats
-      logLevel: 'error',
-      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+      port: chrome.port, output: ['html','json'], logLevel: 'error',
+      onlyCategories: ['performance','accessibility','best-practices','seo'],
+      ...emulation,
     });
-    const [htmlReport, jsonReport] = result!.report as [string, string];
-    const { lhr } = result!;
-    return {
-      scores: {
-        performance:   Math.round((lhr.categories['performance']?.score   ?? 0) * 100),
-        accessibility: Math.round((lhr.categories['accessibility']?.score ?? 0) * 100),
-        bestPractices: Math.round((lhr.categories['best-practices']?.score ?? 0) * 100),
-        seo:           Math.round((lhr.categories['seo']?.score           ?? 0) * 100),
-      },
-      htmlReport, jsonReport,
-    };
+    // returns { scores: { performance, accessibility, bestPractices, seo }, htmlReport }
   } finally {
-    await chrome.kill();   // always clean up
+    await chrome.kill();   // always clean up — even on failure
   }
 }</code></pre>
 </section>
 
-<!-- ─── SLIDE 6: FIXTURE ─── -->
+<!-- SLIDE 5 — THRESHOLDS -->
 <section>
-  <h2>Step 3 — The Playwright Fixture <span class="tag t-new">NEW FILE</span></h2>
-  <p style="font-size:0.55em; color:#a0a8c0; text-align:left; margin:0 0 8px">
-    <code>src/utils/fixtures/lighthouseFixture.ts</code>
-  </p>
-  <pre><code class="language-typescript">import { test as base, TestInfo } from '@playwright/test';
-import { runLighthouse, LighthouseScores } from '@/utils/lighthouse/runLighthouse';
-
-export interface LighthouseActions {
-  audit(url: string): Promise&lt;LighthouseScores&gt;;
+  <h2>Step 2 — Industry Thresholds <span class="tag t-new">NEW FILE</span></h2>
+  <p style="font-size:0.52em;color:#a0a8c0;text-align:left;margin:0 0 8px"><code>src/utils/lighthouse/lighthouseThresholds.ts</code></p>
+  <table class="threshold-table">
+    <tr><th>Category</th><th>Desktop</th><th>Mobile</th><th>Rationale</th></tr>
+    <tr><td>Performance</td><td class="val-warn">≥ 50</td><td class="val-warn">≥ 25</td><td style="font-size:0.9em;color:#a0a8c0">Mobile: 4× CPU throttle applied by Lighthouse</td></tr>
+    <tr><td>Accessibility</td><td class="val-good">≥ 90</td><td class="val-good">≥ 90</td><td style="font-size:0.9em;color:#a0a8c0">WCAG 2.1 AA compliance baseline</td></tr>
+    <tr><td>Best Practices</td><td class="val-good">≥ 90</td><td class="val-good">≥ 90</td><td style="font-size:0.9em;color:#a0a8c0">Google "good" scoring band</td></tr>
+    <tr><td>SEO</td><td class="val-good">≥ 90</td><td class="val-good">≥ 90</td><td style="font-size:0.9em;color:#a0a8c0">Google "good" scoring band</td></tr>
+  </table>
+  <pre style="margin-top:14px"><code class="language-typescript">// Descriptive failure message — no guessing what threshold was missed
+export function thresholdMsg(label, formFactor, score, threshold): string {
+  const status = score >= threshold ? 'meets' : 'BELOW';
+  return `${label} (${formFactor}): ${score} — ${status} industry threshold of ${threshold}`;
 }
+// → "Performance (desktop): 19 — BELOW industry threshold of 50"</code></pre>
+</section>
 
-export const lighthouseTest = base.extend&lt;{ lighthouse: LighthouseActions }&gt;({
+<!-- SLIDE 6 — FIXTURE -->
+<section>
+  <h2>Step 3 — Playwright Fixture <span class="tag t-new">NEW FILE</span></h2>
+  <p style="font-size:0.52em;color:#a0a8c0;text-align:left;margin:0 0 8px"><code>src/utils/fixtures/lighthouseFixture.ts</code></p>
+  <pre><code class="language-typescript">export const lighthouseTest = base.extend&lt;{ lighthouse: LighthouseActions }&gt;({
   lighthouse: async ({}, use, testInfo) => {
     await use({
-      audit: async (url: string) => {
-        const result = await runLighthouse(url);
+      audit: async (url) => {
+        const result = await runLighthouse(url, 'desktop');
 
-        // ① Attach full HTML report → clickable in Playwright HTML report
-        await testInfo.attach('Lighthouse Report', {
-          body: result.htmlReport,
-          contentType: 'text/html',
+        // ① Attach full HTML report — clickable in Playwright dashboard
+        await testInfo.attach('Lighthouse Report (desktop)', {
+          body: result.htmlReport, contentType: 'text/html',
         });
 
-        // ② Annotate scores → visible in the test detail panel
-        const { scores } = result;
+        // ② Annotate scores with pass/fail status vs threshold
         testInfo.annotations.push(
-          { type: 'lighthouse:performance',    description: `${scores.performance}`   },
-          { type: 'lighthouse:accessibility',  description: `${scores.accessibility}` },
-          { type: 'lighthouse:best-practices', description: `${scores.bestPractices}` },
-          { type: 'lighthouse:seo',            description: `${scores.seo}`           },
+          { type: 'lighthouse:desktop:performance',
+            description: scoreStatus(scores.performance, DESKTOP_THRESHOLDS.performance) },
+          // ... accessibility, best-practices, seo
         );
-        return scores;
+        return result.scores;
+      },
+
+      auditMobile: async (url) => {
+        // Same — Lighthouse handles Pixel 5 emulation internally
+        const result = await runLighthouse(url, 'mobile');
+        // attach + annotate with MOBILE_THRESHOLDS
       },
     });
   },
 });</code></pre>
 </section>
 
-<!-- ─── SLIDE 7: WIRE UP ─── -->
+<!-- SLIDE 7 — TEST -->
 <section>
-  <h2>Step 4 — Merge Into Your Base Fixture <span class="tag t-mod">EDIT</span></h2>
-  <p style="font-size:0.55em; color:#a0a8c0; text-align:left; margin:0 0 8px">
-    <code>src/utils/fixtures/providerBaseTest.ts</code>
-  </p>
-  <pre><code class="language-typescript">import { mergeTests }        from '@playwright/test';          // ← Playwright 1.39+
-import { test as base, expect } from '@/utils/fixtures/baseTest';
-import { lighthouseTest }       from '@/utils/fixtures/lighthouseFixture';
+  <h2>Step 4 — The Test (Soft Assertions) <span class="tag t-new">NEW FILE</span></h2>
+  <p style="font-size:0.52em;color:#a0a8c0;text-align:left;margin:0 0 8px"><code>src/tests/performance/HomepageLighthouse.spec.ts</code></p>
+  <pre><code class="language-typescript">test('homepage desktop scores meet thresholds', async ({
+  providerActions, lighthouse,
+}) => {
+  await providerActions.openProviderPortal();
+  const scores = await lighthouse.audit(providerActions.getBaseURL() + '/');
 
-// Combine existing fixtures with the new lighthouse fixture
-export const test = mergeTests(base, lighthouseTest);
-export { expect };</code></pre>
+  // expect.soft → ALL 4 categories checked — no early exit on first miss
+  expect.soft(scores.performance,
+    thresholdMsg('Performance','desktop',scores.performance,DESKTOP_THRESHOLDS.performance))
+    .toBeGreaterThanOrEqual(DESKTOP_THRESHOLDS.performance);
 
-  <div class="callout" style="margin-top: 22px">
-    <strong>That's it.</strong> All tests that already import from
-    <code>providerBaseTest</code> now get access to the <code>lighthouse</code>
-    fixture with no other changes.
+  expect.soft(scores.accessibility, /* ... */).toBeGreaterThanOrEqual(90);
+  expect.soft(scores.bestPractices, /* ... */).toBeGreaterThanOrEqual(90);
+  expect.soft(scores.seo,           /* ... */).toBeGreaterThanOrEqual(90);
+});
+
+// Mobile counterpart uses lighthouse.auditMobile(url) + MOBILE_THRESHOLDS</code></pre>
+  <div class="callout" style="margin-top:14px">
+    <strong>Two tests per page:</strong> desktop and mobile in the same <code>describe</code> block — each attaches its own Lighthouse HTML report.
   </div>
 </section>
 
-<!-- ─── SLIDE 8: USING IN A TEST ─── -->
+<!-- SLIDE 8 — REPORT OUTPUT -->
 <section>
-  <h2>Step 5 — Write a Performance Test <span class="tag t-new">NEW FILE</span></h2>
-  <p style="font-size:0.55em; color:#a0a8c0; text-align:left; margin:0 0 8px">
-    <code>src/tests/us/performance/HomepageLighthouse.spec.ts</code>
-  </p>
-  <pre><code class="language-typescript">import { test, expect } from '@/utils/fixtures/providerBaseTest';
-
-test.describe('Homepage — Lighthouse audit', () => {
-  // Steps:
-  // 1. Open the homepage via the configured base URL.
-  // 2. Run a Lighthouse audit and attach the HTML report.
-  // 3. Assert each score meets the defined minimum threshold.
-  test('homepage scores meet minimum thresholds',
-    async ({ providerActions, lighthouse }) => {   // ← same import, new fixture
-      await providerActions.openProviderPortal();
-
-      const scores = await lighthouse.audit(
-        providerActions.getBaseURL() + '/'
-      );
-
-      expect(scores.performance,    'performance').toBeGreaterThanOrEqual(25);
-      expect(scores.accessibility,  'accessibility').toBeGreaterThanOrEqual(70);
-      expect(scores.bestPractices,  'best-practices').toBeGreaterThanOrEqual(70);
-      expect(scores.seo,            'seo').toBeGreaterThanOrEqual(70);
-  });
-});</code></pre>
-</section>
-
-<!-- ─── SLIDE 9: REPORT OUTPUT ─── -->
-<section>
-  <h2>What You Get in the Playwright Report</h2>
+  <h2>What You See in the Playwright Report</h2>
   <div class="report-mock">
-    <div class="row">
-      <span class="icon pass">✅</span>
-      <span><strong>homepage scores meet minimum thresholds</strong> &nbsp;<span style="color:#555">23.9s</span></span>
+    <div class="row"><span style="color:var(--lh-green);font-size:1.4em">✅</span>
+      <span><strong>homepage desktop scores meet thresholds</strong> &nbsp;<span style="color:#555">24.1s</span></span>
     </div>
-    <div style="padding-left: 32px">
+    <div style="padding-left:32px">
       <div class="anno">
-        <span>🔦 <strong>lighthouse:performance</strong> → 30</span>
-        <span>♿ <strong>lighthouse:accessibility</strong> → 73</span>
-        <span>✔️  <strong>lighthouse:best-practices</strong> → 78</span>
-        <span>🔍 <strong>lighthouse:seo</strong> → 82</span>
+        <span>🔦 <strong>lighthouse:desktop:performance</strong> → 53 ✓ (threshold: 50)</span><br/>
+        <span>♿ <strong>lighthouse:desktop:accessibility</strong> → 92 ✓ (threshold: 90)</span><br/>
+        <span>✔️ <strong>lighthouse:desktop:best-practices</strong> → 73 ✗ BELOW threshold of 90</span><br/>
+        <span>🔍 <strong>lighthouse:desktop:seo</strong> → 91 ✓ (threshold: 90)</span>
       </div>
       <div style="margin-top:10px">
-        <span class="attach">📎 Lighthouse Report  <span style="font-size:0.85em; opacity:0.7">text/html</span></span>
-        &nbsp;← <em style="opacity:0.6">click to open full interactive report</em>
+        <span class="attach">📎 Lighthouse Report (desktop) <span style="font-size:0.85em;opacity:0.7">text/html</span></span>
+        &nbsp;← <em style="opacity:0.6;font-size:0.85em">click to open full interactive Lighthouse report</em>
       </div>
     </div>
   </div>
-  <p style="font-size:0.58em; color:#a0a8c0; margin-top:14px">
-    The full Lighthouse HTML report is embedded as an attachment — click it in the
-    Playwright HTML dashboard to view waterfall, diagnostics, and recommendations.
-  </p>
-</section>
-
-<!-- ─── SLIDE 10: SCORES VISUAL ─── -->
-<section>
-  <h2>Scores Are First-Class Test Data</h2>
-  <div class="scores">
-    <!-- Performance 30 -->
-    <div class="gauge">
-      <div class="ring">
-        <svg viewBox="0 0 36 36">
-          <circle class="ring-bg"  cx="18" cy="18" r="15.9"/>
-          <circle class="ring-val" cx="18" cy="18" r="15.9"
-            stroke="#e63946"
-            stroke-dasharray="30 70"
-            stroke-dashoffset="0"/>
-        </svg>
-        <div class="score-num" style="color:#e63946">30</div>
-      </div>
-      <div class="label">Performance</div>
-    </div>
-    <!-- Accessibility 73 -->
-    <div class="gauge">
-      <div class="ring">
-        <svg viewBox="0 0 36 36">
-          <circle class="ring-bg"  cx="18" cy="18" r="15.9"/>
-          <circle class="ring-val" cx="18" cy="18" r="15.9"
-            stroke="#f77f00"
-            stroke-dasharray="73 27"
-            stroke-dashoffset="0"/>
-        </svg>
-        <div class="score-num" style="color:#f77f00">73</div>
-      </div>
-      <div class="label">Accessibility</div>
-    </div>
-    <!-- Best Practices 78 -->
-    <div class="gauge">
-      <div class="ring">
-        <svg viewBox="0 0 36 36">
-          <circle class="ring-bg"  cx="18" cy="18" r="15.9"/>
-          <circle class="ring-val" cx="18" cy="18" r="15.9"
-            stroke="#f77f00"
-            stroke-dasharray="78 22"
-            stroke-dashoffset="0"/>
-        </svg>
-        <div class="score-num" style="color:#f77f00">78</div>
-      </div>
-      <div class="label">Best Practices</div>
-    </div>
-    <!-- SEO 82 -->
-    <div class="gauge">
-      <div class="ring">
-        <svg viewBox="0 0 36 36">
-          <circle class="ring-bg"  cx="18" cy="18" r="15.9"/>
-          <circle class="ring-val" cx="18" cy="18" r="15.9"
-            stroke="#21bf73"
-            stroke-dasharray="82 18"
-            stroke-dashoffset="0"/>
-        </svg>
-        <div class="score-num" style="color:#21bf73">82</div>
-      </div>
-      <div class="label">SEO</div>
-    </div>
-  </div>
-  <div class="callout" style="margin-top: 24px">
-    <strong>Thresholds enforce quality gates.</strong> Set them to your baseline → CI
-    fails automatically when a deploy degrades performance or accessibility.
-    Scores come from the real site on every run — no mocking.
+  <div class="scores" style="margin-top:16px">
+    <div class="gauge"><div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-val" cx="18" cy="18" r="15.9" stroke="#21bf73" stroke-dasharray="53 47"/></svg><div class="score-num" style="color:#21bf73">53</div></div><div class="label">Perf</div></div>
+    <div class="gauge"><div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-val" cx="18" cy="18" r="15.9" stroke="#21bf73" stroke-dasharray="92 8"/></svg><div class="score-num" style="color:#21bf73">92</div></div><div class="label">A11y</div></div>
+    <div class="gauge"><div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-val" cx="18" cy="18" r="15.9" stroke="#e63946" stroke-dasharray="73 27"/></svg><div class="score-num" style="color:#e63946">73</div></div><div class="label">B.P.</div></div>
+    <div class="gauge"><div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-val" cx="18" cy="18" r="15.9" stroke="#21bf73" stroke-dasharray="91 9"/></svg><div class="score-num" style="color:#21bf73">91</div></div><div class="label">SEO</div></div>
   </div>
 </section>
 
-<!-- ─── SLIDE 11: FILE SUMMARY ─── -->
+<!-- SLIDE 9 — WIRE UP -->
 <section>
-  <h2>Full File Checklist</h2>
-  <ol class="step-list" style="font-size:0.7em; max-width:680px; margin:20px auto 0">
-    <li>
-      <div>
-        <code>yarn add -D lighthouse</code><br/>
-        <span style="color:#a0a8c0; font-size:0.85em">One dependency — brings <code>chrome-launcher</code> along</span>
-      </div>
-    </li>
-    <li>
-      <div>
-        <strong>Create</strong> <code>src/utils/lighthouse/runLighthouse.ts</code><br/>
-        <span style="color:#a0a8c0; font-size:0.85em">Launches Chrome, runs audit, returns scores + HTML/JSON reports</span>
-      </div>
-    </li>
-    <li>
-      <div>
-        <strong>Create</strong> <code>src/utils/fixtures/lighthouseFixture.ts</code><br/>
-        <span style="color:#a0a8c0; font-size:0.85em">Wraps utility in a Playwright fixture; attaches report + annotations</span>
-      </div>
-    </li>
-    <li>
-      <div>
-        <strong>Edit</strong> <code>src/utils/fixtures/providerBaseTest.ts</code><br/>
-        <span style="color:#a0a8c0; font-size:0.85em">Add <code>mergeTests(base, lighthouseTest)</code> — one line change</span>
-      </div>
-    </li>
-    <li>
-      <div>
-        <strong>Create</strong> <code>src/tests/us/performance/*.spec.ts</code><br/>
-        <span style="color:#a0a8c0; font-size:0.85em">Write tests using <code>{ providerActions, lighthouse }</code> — assert on scores</span>
-      </div>
-    </li>
+  <h2>Step 5 — Merge Into Base Fixture <span class="tag t-mod">1-LINE EDIT</span></h2>
+  <p style="font-size:0.52em;color:#a0a8c0;text-align:left;margin:0 0 8px"><code>src/utils/fixtures/providerBaseTest.ts</code></p>
+  <pre><code class="language-typescript">import { mergeTests }              from '@playwright/test';
+import { test as base, expect }   from '@/utils/fixtures/baseTest';
+import { lighthouseTest }         from '@/utils/fixtures/lighthouseFixture';
+
+export const test = mergeTests(base, lighthouseTest);
+export { expect };</code></pre>
+  <div class="callout" style="margin-top:22px">
+    <strong>That's it.</strong> Every test that imports from <code>providerBaseTest</code> gains the <code>lighthouse</code> fixture with no other changes.
+  </div>
+  <ol class="step-list" style="font-size:0.62em;max-width:640px;margin:20px auto 0">
+    <li><div><code>yarn add -D lighthouse</code> — brings <code>chrome-launcher</code> automatically</div></li>
+    <li><div>Create <code>runLighthouse.ts</code> + <code>lighthouseThresholds.ts</code></div></li>
+    <li><div>Create <code>lighthouseFixture.ts</code></div></li>
+    <li><div>Edit base fixture — one <code>mergeTests()</code> line</div></li>
+    <li><div>Write performance spec using <code>{ lighthouse }</code> fixture</div></li>
   </ol>
 </section>
 
-<!-- ─── SLIDE 12: KEY TAKEAWAYS ─── -->
+<!-- SLIDE 10 — TAKEAWAYS -->
 <section>
   <h2>Key Takeaways</h2>
   <div class="final-grid">
-    <div class="final-card">
-      <h4>🔀 No CDP Conflict</h4>
-      Lighthouse launches its own headless Chrome via
-      <code>chrome-launcher</code> — completely independent from the
-      Playwright browser driving your test.
-    </div>
-    <div class="final-card">
-      <h4>📎 Report in the Dashboard</h4>
-      <code>testInfo.attach()</code> embeds the full Lighthouse HTML report
-      as a clickable attachment in the Playwright HTML report — no separate
-      dashboard needed.
-    </div>
-    <div class="final-card">
-      <h4>⚡ Lazy by Design</h4>
-      Lighthouse only runs in tests that call <code>lighthouse.audit()</code>.
-      All other tests are completely unaffected — zero overhead.
-    </div>
-    <div class="final-card">
-      <h4>🛡️ Quality Gate in CI</h4>
-      Score assertions use standard <code>expect()</code> — a regression
-      causes the test to fail, the CI job fails, and the broken build is
-      blocked from shipping.
-    </div>
+    <div class="final-card"><h4>🔀 No CDP Conflict</h4>Lighthouse uses its own Chrome via <code>chrome-launcher</code>. Playwright's browser is completely unaffected.</div>
+    <div class="final-card"><h4>📎 Report in the Dashboard</h4><code>testInfo.attach()</code> embeds the full HTML report as a clickable artifact in the Playwright HTML dashboard.</div>
+    <div class="final-card"><h4>📱 Desktop + Mobile</h4>Pass <code>formFactor: 'mobile'</code> to Lighthouse for Pixel 5 emulation — independent of any Playwright device project.</div>
+    <div class="final-card"><h4>🛡️ Soft Assertions</h4><code>expect.soft()</code> reports all four categories every run. Descriptive messages show exactly which threshold was missed and by how much.</div>
+    <div class="final-card"><h4>⚡ Lazy by Design</h4>Lighthouse only runs in tests that call <code>audit()</code>. Zero overhead for the rest of the suite.</div>
+    <div class="final-card"><h4>📐 Industry Thresholds</h4>Thresholds based on Google's 0–49 / 50–89 / 90–100 scoring bands. Shared constants between fixture annotations and test assertions.</div>
   </div>
 </section>
 
-</div><!-- .slides -->
-</div><!-- .reveal -->
-
+</div></div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
 <script>
-  Reveal.initialize({
-    hash: true,
-    transition: 'slide',
-    transitionSpeed: 'fast',
-    controls: true,
-    progress: true,
-    center: true,
-    plugins: [ RevealHighlight ],
-    highlight: { highlightOnLoad: true },
-  });
+  Reveal.initialize({ hash:true, transition:'slide', transitionSpeed:'fast',
+    controls:true, progress:true, center:true, plugins:[RevealHighlight],
+    highlight:{ highlightOnLoad:true } });
 </script>
 </body>
 </html>
